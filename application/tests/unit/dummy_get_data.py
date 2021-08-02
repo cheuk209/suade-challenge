@@ -1,8 +1,12 @@
 import pandas as pd
 from collections import OrderedDict
+import os
 
-orders_data = pd.read_csv('orders.csv')
-order_lines_data = pd.read_csv('order_lines.csv')
+cwd = os.getcwd()
+orders_data = pd.read_csv(cwd + '/orders.csv')
+order_lines_data = pd.read_csv(cwd + '/order_lines.csv')
+commissions_data = pd.read_csv(cwd + '/commissions.csv')
+product_promotions_data = pd.read_csv(cwd + '/product_promotions.csv')
 
 # identify orders that were placed given a date
 def get_order_ids_by_date(date: str) -> list:
@@ -51,3 +55,74 @@ def get_average_order_total_by_date(date: str) -> float:
         return 0
     average_order_total = sum(orderlines_total_amount) / len(orderlines_total_amount)
     return round(average_order_total, 4)
+
+# get vendor ID based on order id and date
+def get_vendor_ID_based_on_order_ID_and_date(order_id: int, date: str) -> int:
+    vendor_id = orders_data.loc[ (orders_data['id'] == order_id) & (orders_data['created_at'].str[:10] == date), 'vendor_id'].tolist()
+    try:
+        return vendor_id[0]
+    except:
+        return 0
+
+# get commission rate based on vendor ID and date
+def get_commission_rate_based_on_vendor_ID_and_date(vendor_id: int, date: str) -> float:
+    commission_rate = commissions_data.loc[ (commissions_data['date'] == date) & (commissions_data['vendor_id'] == vendor_id), 'rate'].tolist()
+    try:
+        return commission_rate[0]
+    except:
+        return 0
+
+# identify all orders placed, get order ID's, get vendor ID's, for total amount on all order lines, multiplied by commission rate
+# according to vendor ID's
+def get_total_commissions_by_date(date: str) -> float:
+    order_ids = get_order_ids_by_date(date)
+    total_commission = 0
+    for id in order_ids:
+        orderline_total_amount = order_lines_data.loc[order_lines_data['order_id'] == id, 'total_amount'].tolist()
+        orderline_total_amount = sum(orderline_total_amount)
+        vendor_id = get_vendor_ID_based_on_order_ID_and_date(id, date)
+        commission_rate = get_commission_rate_based_on_vendor_ID_and_date(vendor_id, date)
+        commission = orderline_total_amount * commission_rate
+        total_commission = total_commission + commission
+    return round(total_commission, 4)
+
+# get total commissions generated that day, then divided by number of orders placed that day
+def get_average_commission_per_order_by_date(date: str) -> float:
+    total_commission = get_total_commissions_by_date(date)
+    num_of_orders = len(get_order_ids_by_date(date))
+    if not num_of_orders:
+        return 0
+    average_commission = total_commission / num_of_orders
+    return average_commission
+
+# get products by their product IDs, that are being promoted by date
+def get_promoted_products_by_date(date: str) -> dict:
+    product_ids = product_promotions_data.loc[product_promotions_data['date'] == date, 'product_id'].tolist()
+    promotion_ids = dict.fromkeys(product_ids)
+    for id in product_ids:
+        promotion_ids[id] = product_promotions_data.loc[
+            (product_promotions_data['date'] == date)
+            &
+            (product_promotions_data['product_id'] == id),
+            'promotion_id'
+            ].iloc[0]
+    return promotion_ids
+
+# total commission per promotion, how many order lines are buying products on days when the products
+# are being promoted? 
+def get_total_commissions_per_promotion_by_date(date: str) -> dict:
+    order_ids = get_order_ids_by_date(date)
+    promotion_ids = get_promoted_products_by_date(date)
+    result = {"1":0, "2":0, "3":0, "4":0, "5":0}
+    for id in order_ids:
+        promoted_orderline_amount = order_lines_data.loc[
+            (order_lines_data['order_id'] == id)
+            &
+            (order_lines_data['product_id'].isin(promotion_ids.keys())),
+            'total_amount'
+            ].tolist()
+        # if promoted_orderline_amount:  
+        #     vendor_id = get_vendor_ID_based_on_order_ID_and_date(id, date)
+        #     commission_rate = get_commission_rate_based_on_vendor_ID_and_date(vendor_id, date)
+        #     result.
+        return promoted_orderline_amount

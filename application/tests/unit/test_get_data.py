@@ -60,3 +60,4 @@ def test_get_promoted_products_by_date():
 def test_get_total_commissions_per_promotion_by_date():
     assert get_total_commissions_per_promotion_by_date('2021-07-31') == {"1":0, "2":0, "3":0, "4":0, "5":0}
     assert get_total_commissions_per_promotion_by_date('2021-08-01') ==  {"1":0, "2":0, "3":11.2, "4":1.96, "5":0}
+    assert get_total_commissions_per_promotion_by_date('2021-08-02') ==  {"1":1.3, "2":2.76, "3":0.6, "4":0, "5":0}

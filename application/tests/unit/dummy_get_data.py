@@ -112,17 +112,21 @@ def get_promoted_products_by_date(date: str) -> dict:
 # are being promoted? 
 def get_total_commissions_per_promotion_by_date(date: str) -> dict:
     order_ids = get_order_ids_by_date(date)
-    promotion_ids = get_promoted_products_by_date(date)
+    product_ids_dict = get_promoted_products_by_date(date)
+    product_ids_list = list(product_ids_dict.keys())
     result = {"1":0, "2":0, "3":0, "4":0, "5":0}
-    for id in order_ids:
-        promoted_orderline_amount = order_lines_data.loc[
-            (order_lines_data['order_id'] == id)
-            &
-            (order_lines_data['product_id'].isin(promotion_ids.keys())),
-            'total_amount'
-            ].tolist()
-        # if promoted_orderline_amount:  
-        #     vendor_id = get_vendor_ID_based_on_order_ID_and_date(id, date)
-        #     commission_rate = get_commission_rate_based_on_vendor_ID_and_date(vendor_id, date)
-        #     result.
-        return promoted_orderline_amount
+    for order_id in order_ids:
+        for product_id in product_ids_list:
+            promoted_orderline_amount = order_lines_data.loc[
+                (order_lines_data['order_id'] == order_id)
+                &
+                (order_lines_data['product_id']==product_id),
+                'total_amount'
+                ].tolist()
+            if promoted_orderline_amount:
+                promoted_orderline_amount = promoted_orderline_amount[0]
+                promotion_id = product_ids_dict[product_id]
+                vendor_id = get_vendor_ID_based_on_order_ID_and_date(order_id, date)
+                commission_rate = get_commission_rate_based_on_vendor_ID_and_date(vendor_id, date)
+                result[str(promotion_id)] = round(commission_rate * promoted_orderline_amount, 2)
+    return result
